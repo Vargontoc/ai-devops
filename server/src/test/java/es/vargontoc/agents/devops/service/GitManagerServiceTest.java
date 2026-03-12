@@ -46,6 +46,7 @@ class GitManagerServiceTest {
         Project project = new Project();
         project.setName("local-test");
         project.setPath("/some/local/path");
+        project.setBranch("main");
         project.setType(ProjectType.LOCAL);
 
         CompletableFuture<Project> future = gitManagerService.cloneRepositoryAsync(project);
@@ -66,6 +67,7 @@ class GitManagerServiceTest {
         // Since we are running real tests, we expect JGit to actually fetch.
         // Let's test resilience instead by giving a bad url to see if it fails beautifully.
         project.setPath("https://github.com/non-existent-user/fake-repo-abcfdefg.git");
+        project.setBranch("main");
         project.setType(ProjectType.REMOTE);
 
         CompletableFuture<Project> future = gitManagerService.cloneRepositoryAsync(project);

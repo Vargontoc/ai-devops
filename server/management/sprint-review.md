@@ -1,4 +1,4 @@
-# Sprint [3] : [API REST de Proyectos y Despliegues MCP Tool]
+# Sprint [4] : [Soporte Frontend Básicos o Funcionalidades Extendidas]
 
 ## Objetivos
 - [ ] 
@@ -17,8 +17,8 @@
 *Registrar aqui cualquier impedimento técnico encontrado.*
 
 ## Sugerencia y Deuda técnica
-*Registrar aqui ideas para mejorar el código en el futuro.*
-*Registrar aqui ideas de nuevas funcionalidades a implementar, dentro del alcance del proyecto.*
+* El frontend necesitará consumir Swagger. Quizás debamos probar el flujo E2E real.
+* Configuración de Modelos dinámicos en Spring AI.
 
 ## Conclusión
 - **Estado**:  [Éxito / Parcial / Fallido]

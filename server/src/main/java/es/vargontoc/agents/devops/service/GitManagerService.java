@@ -59,6 +59,10 @@ public class GitManagerService {
                     .setURI(project.getPath())
                     .setDirectory(targetDir);
 
+            if (StringUtils.hasText(project.getBranch())) {
+                cloneCommand.setBranch(project.getBranch());
+            }
+
             if (StringUtils.hasText(project.getEncryptedToken())) {
                 // In a real application, decrypt the token first.
                 // Assuming pattern: "username:token" or just "token" mapped to a dummy username for PATs.

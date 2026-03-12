@@ -7,6 +7,7 @@ public record ProjectDto(
         String id,
         String name,
         String path,
+        String branch,
         ProjectType type,
         DeploymentStatus lastStatus
 ) {

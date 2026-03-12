@@ -22,12 +22,12 @@ public class GitTools {
         this.gitManagerService = gitManagerService;
     }
 
-    public record CloneRequest(String projectName, String repositoryUrl, String token) {}
+    public record CloneRequest(String projectName, String repositoryUrl, String branch, String token) {}
     public record CloneResponse(String projectId, String status, String message, String localPath) {}
 
     @Bean
     @Description("Clones a remote git repository into the local /workspace volume. " +
-            "Requires the project name and the repository URL. " +
+            "Requires the project name, repository URL and branch name. " +
             "Optionally accepts a token for private repositories.")
     public Function<CloneRequest, CloneResponse> cloneRepositoryTool() {
         return request -> {
@@ -35,6 +35,7 @@ public class GitTools {
                 Project project = new Project();
                 project.setName(request.projectName());
                 project.setPath(request.repositoryUrl());
+                project.setBranch(request.branch());
                 project.setType(ProjectType.REMOTE);
                 
                 if (StringUtils.hasText(request.token())) {

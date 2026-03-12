@@ -23,6 +23,9 @@ public class Project {
     @Column(nullable = false)
     private ProjectType type;
 
+    @Column(nullable = false)
+    private String branch;
+
     @Column(name = "token")
     private String encryptedToken;
 
@@ -71,6 +74,14 @@ public class Project {
 
     public void setType(ProjectType type) {
         this.type = type;
+    }
+
+    public String getBranch() {
+        return branch;
+    }
+
+    public void setBranch(String branch) {
+        this.branch = branch;
     }
 
     public String getEncryptedToken() {

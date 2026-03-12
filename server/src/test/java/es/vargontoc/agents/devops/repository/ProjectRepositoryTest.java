@@ -26,6 +26,7 @@ class ProjectRepositoryTest {
         Project project = new Project();
         project.setName("test-project");
         project.setPath("https://github.com/test/repo.git");
+        project.setBranch("main");
         project.setType(ProjectType.REMOTE);
         project.setLastStatus(DeploymentStatus.PENDING);
 
@@ -36,6 +37,7 @@ class ProjectRepositoryTest {
         Optional<Project> retrieved = projectRepository.findById(saved.getId());
         assertTrue(retrieved.isPresent());
         assertEquals("test-project", retrieved.get().getName());
+        assertEquals("main", retrieved.get().getBranch());
         assertEquals(ProjectType.REMOTE, retrieved.get().getType());
         assertEquals(DeploymentStatus.PENDING, retrieved.get().getLastStatus());
     }
