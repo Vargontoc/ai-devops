@@ -30,3 +30,14 @@ springdoc:
 logging:
   level:
     es.vargontoc: DEBUG
+
+devops:
+  workspace-dir: /workspace
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:sqlite:target/test-devops.db

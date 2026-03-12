@@ -1,4 +1,4 @@
-# Sprint [2] : [Preparar Tool de Sandboxing y Core Base]
+# Sprint [3] : [API REST de Proyectos y Despliegues MCP Tool]
 
 ## Objetivos
 - [ ] 
@@ -7,7 +7,11 @@
 - [ ] 
 
 ## Comandos de Verificación
-- mvn clean install 
+- `mvn clean install`
+- `mvn test`
+
+## Pruebas manuales
+- 
 
 ## Fallos y bloqueos
 *Registrar aqui cualquier impedimento técnico encontrado.*
