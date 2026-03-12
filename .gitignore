@@ -3,3 +3,7 @@
 *.lock
 
 **/target
+**/.mvn/**
+**/mvnw
+**/.mvnw
+**/mvnw.cmd

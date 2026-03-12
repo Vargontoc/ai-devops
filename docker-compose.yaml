@@ -32,5 +32,18 @@ services:
     ports:
       - "11434:11434"
 
+  devops-agent-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: devops-agent-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./my-proyects:/workspace
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    restart: unless-stopped
+
 volumes:
   ollama_data:
