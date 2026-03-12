@@ -44,6 +44,14 @@ public class ProjectController {
 
     @PostMapping
     public ResponseEntity<ProjectDto> createProject(@RequestBody ProjectCreateRequest request) {
+        if (projectRepository.existsByName(request.name())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El proyecto con el nombre '" + request.name() + "' ya existe.");
+        }
+        
+        if (projectRepository.existsByPath(request.path())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El repositorio con la ruta o URL '" + request.path() + "' ya se encuentra registrado.");
+        }
+
         Project project = new Project();
         project.setName(request.name());
         project.setPath(request.path());

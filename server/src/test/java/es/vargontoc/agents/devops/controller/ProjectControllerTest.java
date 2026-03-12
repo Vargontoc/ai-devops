@@ -110,4 +110,41 @@ class ProjectControllerTest {
         Mockito.verify(gitManagerService, Mockito.times(1)).cloneRepositoryAsync(any());
         Mockito.verify(projectRepository, Mockito.times(2)).save(any(Project.class));
     }
+
+    @Test
+    void shouldReturnConflictWhenNameExists() throws Exception {
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                "existing-app",
+                "https://github.com/new-path",
+                "main",
+                ProjectType.REMOTE,
+                null
+        );
+
+        Mockito.when(projectRepository.existsByName("existing-app")).thenReturn(true);
+
+        mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldReturnConflictWhenPathExists() throws Exception {
+        ProjectCreateRequest request = new ProjectCreateRequest(
+                "new-app",
+                "https://github.com/existing-path",
+                "main",
+                ProjectType.REMOTE,
+                null
+        );
+
+        Mockito.when(projectRepository.existsByName(any())).thenReturn(false);
+        Mockito.when(projectRepository.existsByPath("https://github.com/existing-path")).thenReturn(true);
+
+        mockMvc.perform(post("/api/v1/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
 }
