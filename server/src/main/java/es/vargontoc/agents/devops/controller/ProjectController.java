@@ -6,7 +6,7 @@ import es.vargontoc.agents.devops.domain.entity.Project;
 import es.vargontoc.agents.devops.domain.enums.DeploymentStatus;
 import es.vargontoc.agents.devops.domain.enums.ProjectType;
 import es.vargontoc.agents.devops.repository.ProjectRepository;
-import es.vargontoc.agents.devops.service.GitManagerService;
+import es.vargontoc.agents.devops.service.DeploymentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,11 +21,11 @@ import java.util.stream.Collectors;
 public class ProjectController {
 
     private final ProjectRepository projectRepository;
-    private final GitManagerService gitManagerService;
+    private final DeploymentService deploymentService;
 
-    public ProjectController(ProjectRepository projectRepository, GitManagerService gitManagerService) {
+    public ProjectController(ProjectRepository projectRepository, DeploymentService deploymentService) {
         this.projectRepository = projectRepository;
-        this.gitManagerService = gitManagerService;
+        this.deploymentService = deploymentService;
     }
 
     @GetMapping
@@ -58,19 +58,21 @@ public class ProjectController {
         project.setBranch(request.branch());
         project.setType(request.type());
         project.setEncryptedToken(request.token());
-        project.setLastStatus(DeploymentStatus.PENDING); // Initial status before async evaluation
+        project.setLastStatus(DeploymentStatus.PENDING); // Initial status
 
         Project saved = projectRepository.save(project);
-
-        if (saved.getType() == ProjectType.REMOTE) {
-            // Trigger async clone for remote repositories
-            saved.setLastStatus(DeploymentStatus.CLONING);
-            projectRepository.save(saved);
-            gitManagerService.cloneRepositoryAsync(saved);
-            return ResponseEntity.accepted().body(mapToDto(saved));
-        }
-
         return ResponseEntity.status(HttpStatus.CREATED).body(mapToDto(saved));
+    }
+
+    @PostMapping("/{id}/run")
+    public ResponseEntity<Void> runProject(@PathVariable String id) {
+        Project project = projectRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+        
+        // Trigger agentic deployment flow asynchronously
+        deploymentService.executeAgenticDeployment(project.getId());
+        
+        return ResponseEntity.accepted().build();
     }
 
     private ProjectDto mapToDto(Project project) {

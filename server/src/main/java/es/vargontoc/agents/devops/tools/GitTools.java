@@ -1,15 +1,15 @@
 package es.vargontoc.agents.devops.tools;
 
 import es.vargontoc.agents.devops.domain.entity.Project;
-import es.vargontoc.agents.devops.domain.enums.ProjectType;
+import es.vargontoc.agents.devops.repository.ProjectRepository;
 import es.vargontoc.agents.devops.service.GitManagerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Description;
-import org.springframework.util.StringUtils;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 @Configuration
@@ -17,47 +17,41 @@ public class GitTools {
 
     private static final Logger log = LoggerFactory.getLogger(GitTools.class);
     private final GitManagerService gitManagerService;
+    private final ProjectRepository projectRepository;
 
-    public GitTools(GitManagerService gitManagerService) {
+    public GitTools(GitManagerService gitManagerService, ProjectRepository projectRepository) {
         this.gitManagerService = gitManagerService;
+        this.projectRepository = projectRepository;
     }
 
-    public record CloneRequest(String projectName, String repositoryUrl, String branch, String token) {}
-    public record CloneResponse(String projectId, String status, String message, String localPath) {}
+    public record CloneRequest(String projectId) {}
+    public record CloneResponse(String targetDirectoryPath, String status, String message) {}
 
     @Bean
-    @Description("Clones a remote git repository into the local /workspace volume. " +
-            "Requires the project name, repository URL and branch name. " +
-            "Optionally accepts a token for private repositories.")
+    @Description("Clones or updates a remote Git repository for a specific project. " +
+                 "Requires the exact projectId of the target project. Call this tool before deploying if the project is REMOTE.")
     public Function<CloneRequest, CloneResponse> cloneRepositoryTool() {
         return request -> {
             try {
-                Project project = new Project();
-                project.setName(request.projectName());
-                project.setPath(request.repositoryUrl());
-                project.setBranch(request.branch());
-                project.setType(ProjectType.REMOTE);
+                log.info("Tool triggered: Cloning/Updating project ID {}", request.projectId());
+                Optional<Project> projectOpt = projectRepository.findById(request.projectId());
                 
-                if (StringUtils.hasText(request.token())) {
-                    project.setEncryptedToken(request.token());
+                if (projectOpt.isEmpty()) {
+                    return new CloneResponse(null, "FAILED", "Project not found with ID: " + request.projectId());
                 }
 
-                log.info("Tool triggered: Cloning repository {} for project {}", request.repositoryUrl(), request.projectName());
-                
-                // Triggering async clone but waiting for it to provide immediate feedback to the LLM agent
-                // Depending on the Agent flow, we could just return "cloning started" and let it check status later,
-                // but for simplicity in this tool we'll wait an acceptable amount of time or return the future's result.
-                Project result = gitManagerService.cloneRepositoryAsync(project).join();
-                
+                Project project = projectOpt.get();
+                // We wait for the future to finish to give immediate feedback to the LLM agent
+                Project cloned = gitManagerService.cloneRepositoryAsync(project).join();
+
                 return new CloneResponse(
-                        result.getId(), 
-                        result.getLastStatus().name(), 
-                        "Repository cloning process executed.", 
-                        result.getPath()
+                        cloned.getPath(), 
+                        "SUCCESS", 
+                        "Repository cloned successfully onto: " + cloned.getPath()
                 );
             } catch (Exception e) {
-                log.error("Tool execution failed: {}", e.getMessage(), e);
-                return new CloneResponse(null, "FAILED", "Error: " + e.getMessage(), null);
+                log.error("Clone Tool execution failed: {}", e.getMessage(), e);
+                return new CloneResponse(null, "FAILED", "Error: " + e.getMessage());
             }
         };
     }

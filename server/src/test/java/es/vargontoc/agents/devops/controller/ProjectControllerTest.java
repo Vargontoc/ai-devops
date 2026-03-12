@@ -6,7 +6,7 @@ import es.vargontoc.agents.devops.domain.entity.Project;
 import es.vargontoc.agents.devops.domain.enums.DeploymentStatus;
 import es.vargontoc.agents.devops.domain.enums.ProjectType;
 import es.vargontoc.agents.devops.repository.ProjectRepository;
-import es.vargontoc.agents.devops.service.GitManagerService;
+import es.vargontoc.agents.devops.service.DeploymentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -36,12 +36,12 @@ class ProjectControllerTest {
     private ProjectRepository projectRepository;
 
     @MockBean
-    private GitManagerService gitManagerService;
+    private DeploymentService deploymentService;
 
     @BeforeEach
     void setUp() {
         // Reset mocks before each test
-        Mockito.reset(projectRepository, gitManagerService);
+        Mockito.reset(projectRepository, deploymentService);
     }
 
     @Test
@@ -72,12 +72,12 @@ class ProjectControllerTest {
                 .andExpect(jsonPath("$.branch").value("main"))
                 .andExpect(jsonPath("$.type").value(ProjectType.LOCAL.name()));
 
-        // Local project shouldn't trigger git clone
-        Mockito.verify(gitManagerService, Mockito.never()).cloneRepositoryAsync(any());
+        // Local project shouldn't trigger any deployment automatically
+        Mockito.verify(deploymentService, Mockito.never()).executeAgenticDeployment(any());
     }
 
     @Test
-    void shouldReturnAcceptedWhenRemoteProjectAndTriggerClone() throws Exception {
+    void shouldReturnCreatedWhenRemoteProject() throws Exception {
         ProjectCreateRequest request = new ProjectCreateRequest(
                 "my-remote-app",
                 "https://github.com/test",
@@ -92,23 +92,35 @@ class ProjectControllerTest {
         mockedProject.setPath("https://github.com/test");
         mockedProject.setBranch("dev");
         mockedProject.setType(ProjectType.REMOTE);
-        mockedProject.setLastStatus(DeploymentStatus.CLONING);
+        mockedProject.setLastStatus(DeploymentStatus.PENDING);
 
-        // First save during creation, second save when updating status to cloning
         Mockito.when(projectRepository.save(any(Project.class))).thenReturn(mockedProject);
-        Mockito.when(gitManagerService.cloneRepositoryAsync(any(Project.class)))
-                .thenReturn(CompletableFuture.completedFuture(mockedProject));
 
         mockMvc.perform(post("/api/v1/projects")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isAccepted())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("456"))
                 .andExpect(jsonPath("$.branch").value("dev"))
-                .andExpect(jsonPath("$.lastStatus").value(DeploymentStatus.CLONING.name()));
+                .andExpect(jsonPath("$.lastStatus").value(DeploymentStatus.PENDING.name()));
 
-        Mockito.verify(gitManagerService, Mockito.times(1)).cloneRepositoryAsync(any());
-        Mockito.verify(projectRepository, Mockito.times(2)).save(any(Project.class));
+        Mockito.verify(deploymentService, Mockito.never()).executeAgenticDeployment(any());
+        Mockito.verify(projectRepository, Mockito.times(1)).save(any(Project.class));
+    }
+
+    @Test
+    void shouldReturnAcceptedWhenRunTriggered() throws Exception {
+        Project mockedProject = new Project();
+        mockedProject.setId("789");
+
+        Mockito.when(projectRepository.findById("789")).thenReturn(java.util.Optional.of(mockedProject));
+        Mockito.when(deploymentService.executeAgenticDeployment(any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        mockMvc.perform(post("/api/v1/projects/789/run"))
+                .andExpect(status().isAccepted());
+
+        Mockito.verify(deploymentService, Mockito.times(1)).executeAgenticDeployment("789");
     }
 
     @Test

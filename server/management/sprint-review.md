@@ -1,28 +1,29 @@
-# Sprint [4] : [Control de Duplicidad en Proyectos]
+# Sprint [5] : [Orquestación Agéntica Reactiva y WebSockets]
 
 ## Objetivos
-- [x] **Validación de Nombre Duplicado**: Implementar lógica para evitar la creación de proyectos con idéntico `name`.
-- [x] **Validación de Path Duplicado**: Implementar lógica para evitar el registro o clonado de repositorios con un `path` ya mapeado.
-- [x] **Integridad en BD**: Añadir restricciones `UNIQUE` sobre `name` y `path` al esquema de SQLite.
-- [x] **Endpoints de error (409 Conflict)**: Atrapar el duplicado en la capa Web y regresar texto inteligible.
+- [x] **Desacoplar Git del Alta**: La API ya no clona el proyecto de manera síncrona/automática durante su registro.
+- [x] **EntryPoint de Ejecución Asíncrono**: Crear nuevo Endpoint `POST` para recibir peticiones desencadenantes delegando a asincronía (HTTP 202).
+- [x] **Inyección de Websockets**: Implementar la capa interna de WebSocket (STOMP Default) para stremear del backend.
+- [x] **Orquestación con Inteligencia Artificial**: Utilizando Spring AI, proveer el modelo Ollama con todas las Tools (incluyendo Clone Tool). Dejar que decida el procedimiento. Streamear cada acción y texto devuelto directo al WebSocket del proyecto.
+- [x] **Fallo de Conexión Duro**: Capturar excepción de Ollama notificando "Agente detenido" instantáneamente.
 
 ## Validación del Sprint
-- [x] Verificar vía Unit Testing en Controller y Repositorio que los duplicados sean denegados.
+- [x] Ejecutar simulación local de Socket STOMP confirmando emisión.
+- [x] Confirmar exclusión de clonado en `ProjectControllerTest.java`.
 
 ## Comandos de Verificación
 - `mvn clean install`
 - `mvn test`
 
 ## Pruebas manuales
-- Levantar servidor web y repetir dos peticiones POST a `/api/v1/projects` con el mismo payload.
-- Registrar el proyecto X y el proyecto Y referenciando al mismo repositorio Github, confirmar error en el segundo.
+- 
 
 ## Fallos y bloqueos
 *Registrar aqui cualquier impedimento técnico encontrado.*
 
 ## Sugerencia y Deuda técnica
-*Registrar aqui ideas para mejorar el código en el futuro.*
+- Necesidad de Sandbox de comandos: Actualmente un agente sin restricciones podría teóricamente ejecutar `rm -rf /` fuera de control. 
 
 ## Conclusión
 - **Estado**: Éxito
-- **Commit Sugerido**: `feat(api): implement unique constraints and 409 conflict validation for duped projects`
+- **Commit Sugerido**: `feat(agent): refactor to full llm-driven pipeline with async tool execution and websocket streaming`

@@ -32,12 +32,23 @@ class DeploymentServiceTest {
     @Mock
     private DeploymentLogRepository deploymentLogRepository;
 
-    @InjectMocks
+    private org.springframework.ai.chat.client.ChatClient.Builder chatClientBuilder;
+
+    @Mock
+    private org.springframework.ai.chat.client.ChatClient chatClient;
+
+    @Mock
+    private WebSocketNotificationService wsNotificationService;
+
     private DeploymentService deploymentService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        chatClientBuilder = Mockito.mock(org.springframework.ai.chat.client.ChatClient.Builder.class, Mockito.RETURNS_SELF);
+        when(chatClientBuilder.build()).thenReturn(chatClient);
+        
+        deploymentService = new DeploymentService(projectRepository, deploymentLogRepository, chatClientBuilder, wsNotificationService);
     }
 
     @Test

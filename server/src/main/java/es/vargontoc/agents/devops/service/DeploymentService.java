@@ -6,6 +6,9 @@ import es.vargontoc.agents.devops.domain.entity.Project;
 import es.vargontoc.agents.devops.domain.enums.DeploymentStatus;
 import es.vargontoc.agents.devops.repository.DeploymentLogRepository;
 import es.vargontoc.agents.devops.repository.ProjectRepository;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
+import reactor.core.publisher.Flux;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -29,10 +32,69 @@ public class DeploymentService {
 
     private final ProjectRepository projectRepository;
     private final DeploymentLogRepository deploymentLogRepository;
+    private final ChatClient chatClient;
+    private final WebSocketNotificationService wsNotificationService;
 
-    public DeploymentService(ProjectRepository projectRepository, DeploymentLogRepository deploymentLogRepository) {
+    public DeploymentService(ProjectRepository projectRepository, 
+                             DeploymentLogRepository deploymentLogRepository,
+                             ChatClient.Builder chatClientBuilder,
+                             WebSocketNotificationService wsNotificationService) {
         this.projectRepository = projectRepository;
         this.deploymentLogRepository = deploymentLogRepository;
+        this.wsNotificationService = wsNotificationService;
+        this.chatClient = chatClientBuilder
+            .defaultSystem("Eres el DevOps AI Orchestrator. Tu misión es cumplir con las peticiones de despliegue clonando e instalando el proyecto mediante las herramientas.")
+            .defaultFunctions("deployProjectTool", "cloneRepositoryTool")
+            .build();
+    }
+
+    @Async
+    public CompletableFuture<Void> executeAgenticDeployment(String projectId) {
+        log.info("Agentic deployment triggered for project ID: {}", projectId);
+        
+        return projectRepository.findById(projectId).map(project -> {
+            wsNotificationService.sendProjectStatus(projectId, "DEPLOYING");
+            
+            String userPrompt = String.format(
+                "Inicia el proceso de despliegue para el proyecto. ID: %s, Nombre: %s, Repo/Path: %s, Rama: %s, Tipo: %s. " +
+                "Primero, usa la tool 'cloneRepositoryTool' si el proyecto es REMOTE para clonarlo/actualizarlo. " +
+                "Luego, usa la tool 'deployProjectTool' para ejecutar el deploy.md del repositorio. " +
+                "Mantenme informado paso a paso.",
+                project.getId(), project.getName(), project.getPath(), project.getBranch(), project.getType()
+            );
+
+            try {
+                Flux<String> responseStream = chatClient.prompt()
+                    .user(userPrompt)
+                    .stream()
+                    .content();
+
+                responseStream.subscribe(
+                    contentFragment -> {
+                        if (contentFragment != null) {
+                            wsNotificationService.sendProjectLog(projectId, contentFragment);
+                        }
+                    },
+                    error -> {
+                        log.error("AI stream error for project {}: {}", projectId, error.getMessage(), error);
+                        wsNotificationService.sendProjectStatus(projectId, "FAILED: Agente detenido por error de conexión o tiempo de espera.");
+                        updateProjectStatus(project, DeploymentStatus.FAILED);
+                    },
+                    () -> {
+                        log.info("Agent finished reasoning and executing for project {}", projectId);
+                        wsNotificationService.sendProjectStatus(projectId, "FINISHED");
+                    }
+                );
+            } catch (Exception e) {
+                log.error("Failed to start agent for project {}: {}", projectId, e.getMessage());
+                wsNotificationService.sendProjectStatus(projectId, "FAILED: Agente detenido al inicio.");
+                updateProjectStatus(project, DeploymentStatus.FAILED);
+            }
+            return CompletableFuture.completedFuture((Void) null);
+        }).orElseGet(() -> {
+            log.warn("Project {} not found for deployment.", projectId);
+            return CompletableFuture.completedFuture(null);
+        });
     }
 
     /**
