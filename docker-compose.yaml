@@ -1,0 +1,36 @@
+services:
+  ollama-gpu:
+    image: ollama/ollama:latest
+    container_name: ollama-devops-gpu
+    profiles: [ "gpu" ] # Only runs if user specific --profile gpu
+    volumes:
+      - ./Modelfile:/root/Modelfile
+      - ./entrypoint.sh:/root/entrypoint.sh
+      - ollama_data:/root/.ollama
+      - ./my-proyects:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    entrypoint: [ "/usr/bin/bash", "/root/entrypoint.sh" ]
+    ports:
+      - "11434:11434"
+
+  ollama-cpu:
+    image: ollama/ollama:latest
+    container_name: ollama-devops-cpu
+    profiles: [ "cpu" ] # Only runs if user specific --profile cpu
+    volumes:
+      - ./Modelfile:/root/Modelfile
+      - ./entrypoint.sh:/root/entrypoint.sh
+      - ollama_data:/root/.ollama
+      - ./my-proyects:/workspace
+    entrypoint: [ "/usr/bin/bash", "/root/entrypoint.sh" ]
+    ports:
+      - "11434:11434"
+
+volumes:
+  ollama_data:
